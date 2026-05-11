@@ -52,7 +52,7 @@ colcon build --packages-select scout_description --symlink-install
 
 ```bash
 cd <your_ws>/src
-git clone -b humble https://github.com/ROBOTIS-GIT/open_manipulator_x.git
+git clone https://github.com/ROBOTIS-GIT/open_manipulator.git
 cd <your_ws>
 colcon build --packages-select open_manipulator_x_description
 ```
