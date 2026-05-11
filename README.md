@@ -2,6 +2,8 @@
 
 Scout Mini + OpenMANIPULATOR-X 모바일 매니퓰레이터 Gazebo 시뮬레이션 패키지.
 
+![Gazebo 시뮬레이션](media/gazebo_preview.png)
+
 자율주행 택배 로봇 캡스톤 프로젝트의 일부로, Scout Mini 위에 알루미늄 프레임과 OpenMANIPULATOR-X 로봇팔을 합체한 URDF 및 Gazebo 환경을 제공합니다.
 
 ## 구성
