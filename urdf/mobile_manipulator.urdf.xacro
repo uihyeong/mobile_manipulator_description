@@ -106,7 +106,7 @@
     <parent link="base_link"/>
     <child link="$(arg prefix)link1"/>
     <!-- 차체 상단(0.069) + 프로파일(0.65) + 상판(0.005) = 0.724 -->
-    <origin xyz="-0.12757 0.0 0.724" rpy="0 0 0"/>
+    <origin xyz="-0.12757 0.0 0.724" rpy="0 0 3.14159"/>
   </joint>
 
 </robot>
