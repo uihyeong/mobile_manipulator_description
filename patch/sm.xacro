@@ -1,0 +1,199 @@
+<?xml version="1.0"?>
+
+<robot name="scout_mini"
+    xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:arg name="robot_namespace" default="/" />
+    <xacro:arg name="urdf_extras" default="empty.urdf" />
+    <!-- 모바일 매니퓰레이터 프레임 위에 얹을 때 높이/위치 조정 (기본값: 독립 Scout Mini) -->
+    <xacro:arg name="laser_z" default="0.620" />
+    <xacro:arg name="laser_x" default="0.0"   />
+    <xacro:arg name="imu_z"   default="0.605" />
+    <xacro:arg name="imu_x"   default="-0.12" />
+
+    <xacro:include filename="$(find scout_description)/urdf/scout_mini_wheel_1.xacro" />
+    <xacro:include filename="$(find scout_description)/urdf/scout_mini_wheel_2.xacro" />
+    <xacro:include filename="$(find scout_description)/urdf/scout_mini_wheel_3.xacro" />
+    <xacro:include filename="$(find scout_description)/urdf/scout_mini_wheel_4.xacro" />
+    <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
+
+    <!-- Variables -->
+    <xacro:property name="M_PI" value="3.14159"/>
+
+    <!-- Vehicle Geometries -->
+    <xacro:property name="base_x_size" value="0.6200000" />
+    <xacro:property name="base_y_size" value="0.585000" />
+    <xacro:property name="base_z_size" value="0.235000" />
+
+    <xacro:property name="wheelbase" value="0.463951"/>
+    <xacro:property name="track" value="0.416503"/>
+    <xacro:property name="wheel_vertical_offset" value="-0.100998" />
+
+    <xacro:property name="wheel_length" value="0.8e-01" />
+    <xacro:property name="wheel_radius" value="1.600e-01" />
+
+    <xacro:property name="wheel_diameter" value="0.16" />
+    <xacro:property name="wheel_width" value="0.084" />
+
+    <!-- Base link -->
+    <link name="base_link">
+        <visual>
+            <origin
+                    xyz="0 0 0.0"
+                    rpy="1.57 0 -1.57" />
+            <geometry>
+                <mesh filename="file://$(find scout_description)/meshes/sm_base_link.dae" /> 
+            </geometry>
+        </visual>
+        <collision>
+            <origin
+                    xyz="0 0 0"
+                    rpy="1.57 0 -1.57" />
+            <geometry>
+                <mesh filename="file://$(find scout_description)/meshes/sm_base_link.dae" />
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="inertial_link">
+        <inertial>
+            <mass value="60" />
+            <origin xyz="0.0 0.0 0.0" />
+            <inertia ixx="2.288641" ixy="0" ixz="0" iyy="5.103976" iyz="0" izz="3.431465" />
+        </inertial>
+    </link>
+
+    <joint name="inertial_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <parent link="base_link"/>
+        <child link="inertial_link"/>
+    </joint>
+
+    <!-- RealSense D435 카메라 장착 -->
+    <xacro:sensor_d435
+        parent="base_link"
+        name="camera"
+        use_nominal_extrinsics="true"
+        add_plug="false"
+        use_mesh="true">
+        <!-- base_link 기준: x=0.17, y=0.0, z=0.51 -->
+        <origin xyz="0.17 0.0 0.51" rpy="0 0 0"/>
+    </xacro:sensor_d435>
+
+      <!-- LiDAR 링크 -->
+    <!-- LiDAR link -->
+    <!-- base_link 위에 LiDAR 고정 (실제 위치 0.60 m, yaw 180도) -->
+    <xacro:macro name="scout_laser" params="parent_link *joint_pose">
+      <link name="laser">
+        <inertial>
+          <mass value="0.19"/>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <inertia
+            ixx="9.5e-05" ixy="0" ixz="0"
+            iyy="9.5e-05" iyz="0"
+            izz="1.37e-04"/>
+        </inertial>
+
+        <visual name="laser_visual">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <!-- 대략 RPLidar 크기 비슷하게 -->
+            <cylinder radius="0.038" length="0.041"/>
+          </geometry>
+          <material name="laser_material">
+            <color rgba="0.1 0.1 0.2 1.0"/>  <!-- 원래 0.1 0.1 0.2 1.0-->
+          </material>
+        </visual>
+
+        <collision name="laser_collision">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <cylinder radius="0.038" length="0.041"/>
+          </geometry>
+        </collision>
+      </link>
+
+      <joint type="fixed" name="laser_mount">
+        <!-- 여기서 자세/위치는 호출할 때 넘겨줌 -->
+        <xacro:insert_block name="joint_pose"/>
+        <parent link="${parent_link}"/>
+        <child  link="laser"/>
+      </joint>
+    </xacro:macro>
+
+    <xacro:scout_laser parent_link="base_link">
+      <origin xyz="$(arg laser_x) 0 $(arg laser_z)" rpy="0 0 3.1416"/>
+    </xacro:scout_laser>
+
+    <xacro:macro name="scout_imu" params="parent_link frame_prefix *joint_pose">
+      <link name="${frame_prefix}_link">
+        <!-- EBIMU24GV6 대략 질량/관성 (소형 IMU라 아주 작게 설정) -->
+        <inertial>
+          <mass value="0.05"/> <!-- 50g 정도 가정 -->
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <inertia
+            ixx="5.8e-06" ixy="0" ixz="0"
+            iyy="5.8e-06" iyz="0"
+            izz="1.02e-05"/>
+        </inertial>
+
+        <!-- 간단한 직육면체로 시각화 (대략 4cm x 4cm x 1.5cm) -->
+        <visual name="imu_visual">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <box size="0.035 0.035 0.013"/>
+          </geometry>
+          <material name="imu_material">
+            <color rgba="0.2 0.8 0.2 1.0"/>
+          </material>
+        </visual>
+
+        <collision name="imu_collision">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <box size="0.035 0.035 0.013"/>
+          </geometry>
+        </collision>
+      </link>
+
+      <!-- 로봇과 IMU를 이어주는 fixed joint -->
+      <joint type="fixed" name="${frame_prefix}_joint">
+        <!-- 실제 위치/자세는 호출할 때 joint_pose로 넘김 -->
+        <xacro:insert_block name="joint_pose"/>
+        <parent link="${parent_link}"/>
+        <child  link="${frame_prefix}_link"/>
+      </joint>
+    </xacro:macro>
+  
+    <!-- EBIMU24GV6 IMU 장착 (위치는 나중에 실제 설치 후 수정) -->
+    <xacro:scout_imu parent_link="base_link" frame_prefix="imu">
+      <!-- TODO: 내일 실제 부착 위치에 맞게 xyz / rpy 수정 -->
+      <origin xyz="$(arg imu_x) 0 $(arg imu_z)" rpy="0 0 0"/>
+    </xacro:scout_imu>
+    <!--<link name="laser"/>
+        <joint name="laser_mount" type="fixed">
+        <parent link="base_link"/>
+        <child  link="laser"/>
+        <origin xyz="0 0 0.60" rpy="0 0 3.1416"/>
+    </joint>-->
+
+    <xacro:scout_mini_wheel_1 wheel_prefix="front_left">
+        <origin xyz="${wheelbase/2} ${track/2} ${wheel_vertical_offset}" rpy="-1.57 0 0" />
+    </xacro:scout_mini_wheel_1>
+    <xacro:scout_mini_wheel_2 wheel_prefix="rear_left">
+        <origin xyz="${-wheelbase/2} ${track/2} ${wheel_vertical_offset}" rpy="-1.57 0 0" />
+    </xacro:scout_mini_wheel_2>
+    <xacro:scout_mini_wheel_3 wheel_prefix="front_right">
+        <origin xyz="${wheelbase/2} ${-track/2} ${wheel_vertical_offset}" rpy="1.57 0 0" />
+    </xacro:scout_mini_wheel_3>
+    <xacro:scout_mini_wheel_4 wheel_prefix="rear_right">
+        <origin xyz="${-wheelbase/2} ${-track/2} ${wheel_vertical_offset}" rpy="1.57 0 0" />
+    </xacro:scout_mini_wheel_4>
+
+    <!-- Additional definitions-->
+    <xacro:include filename="$(arg urdf_extras)" />
+    <xacro:include filename="$(find scout_description)/urdf/sm.gazebo" />
+    <!--<xacro:scout_mini_gazebo />  <실차로할때는 주석처리, 시뮬레이션 할 때는 실행되게--> 
+    <!--<xacro:include filename="$(find scout_description)/urdf/scout_mini_wheel.gazebo" />-->
+
+</robot>
